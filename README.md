@@ -247,4 +247,31 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://user:password@host/db'
 
 ---
 
+## 💝 捐赠支持
+
+如果你觉得 **WorkApp** 为你减少了开发成本、化解了工作/生活里的难题，可以通过以下方式支持一下～
+
+### 微信捐赠
+
+<p align="center">
+  <img src="static/images/wechat-donation-qr.png" alt="微信捐赠二维码" width="200">
+  <br>
+  <strong>微信扫码捐赠</strong>
+  <br>
+  <em>您的支持是我继续开源的动力 💪</em>
+</p>
+
+### 支持方式
+
+- 🌟 **Star** 本项目 - 让更多人发现这个工具
+- 📢 **分享** 给有需要的朋友或同事
+- 💬 **反馈** 使用中的问题和建议
+- 💰 **捐赠** 支持项目持续发展
+
+### 致谢
+
+感谢所有为开源社区做出贡献的开发者们！您的每一份支持都让我更有动力去完善这个项目。
+
+---
+
 **WorkApp** - 让企业应用管理变得简单而强大！ 🚀

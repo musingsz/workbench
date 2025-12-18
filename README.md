@@ -254,11 +254,10 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql://user:password@host/db'
 ### 微信捐赠
 
 <p align="center">
-  <img src="static/images/wechat-donation-qr.png" alt="微信捐赠二维码" width="200">
+  <img src="static/images/wechat-donation-qr.png" alt="微信捐赠二维码" width="300">
   <br>
   <strong>微信扫码捐赠</strong>
   <br>
-  <em>您的支持是我继续开源的动力 💪</em>
 </p>
 
 ### 支持方式

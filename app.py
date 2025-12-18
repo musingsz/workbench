@@ -8,12 +8,16 @@ from models import db, User, Workbench, Workspace, AppIcon
 
 # Load configuration
 config_name = os.environ.get('FLASK_ENV', 'development')
-if config_name == 'production':
-    from config import ProductionConfig as ConfigClass
-elif config_name == 'development':
-    from config import DevelopmentConfig as ConfigClass
-else:
-    from config import DevelopmentConfig as ConfigClass
+try:
+    if config_name == 'production':
+        from config import ProductionConfig as ConfigClass
+    elif config_name == 'development':
+        from config import DevelopmentConfig as ConfigClass
+    else:
+        from config import DevelopmentConfig as ConfigClass
+except ImportError:
+    # Fallback configuration if config.py doesn't exist
+    from config_example import DevelopmentConfig as ConfigClass
 
 app = Flask(__name__)
 app.config.from_object(ConfigClass)

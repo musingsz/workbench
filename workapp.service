@@ -1,0 +1,25 @@
+[Unit]
+Description=WorkApp Enterprise Application Center
+After=network.target
+
+[Service]
+Type=exec
+User=www-data
+Group=www-data
+WorkingDirectory=/path/to/workapp
+Environment=PATH=/path/to/workapp/venv/bin
+Environment=FLASK_ENV=production
+Environment=SECRET_KEY=your-secret-key-here
+Environment=DATABASE_URL=mysql://user:password@localhost/workapp
+Environment=WECOM_CORPID=your_corp_id
+Environment=WECOM_SECRET=your_app_secret
+Environment=WECOM_AGENTID=your_agent_id
+Environment=DEV_MODE=false
+ExecStart=/path/to/workapp/venv/bin/gunicorn --config gunicorn.conf.py app:app
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

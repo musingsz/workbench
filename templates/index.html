@@ -1,0 +1,477 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<!-- Layout Container -->
+<div class="flex w-full h-full" x-data="{ sidebarOpen: true }">
+
+    <!-- Sidebar -->
+    <aside class="flex-shrink-0 bg-white border-r border-gray-200 flex flex-col transition-all duration-300 relative z-20"
+           :class="sidebarOpen ? 'w-64' : 'w-0 opacity-0 overflow-hidden border-none'"
+           x-data="{}">
+        
+        <!-- Sidebar Header -->
+        <div class="h-16 flex items-center px-5 border-b border-gray-100">
+            <div class="w-8 h-8 bg-brand-600 rounded-lg flex items-center justify-center text-white mr-3 shadow-lg shadow-brand-500/30">
+                <i class="ph-bold ph-squares-four text-lg"></i>
+            </div>
+            <span class="font-bold text-gray-900 tracking-tight">WorkApp</span>
+        </div>
+
+        <!-- Sidebar Content -->
+        <div class="flex-1 overflow-y-auto py-6 px-3 space-y-6">
+            
+            <!-- Workbenches List -->
+            <div>
+                <div class="px-3 flex items-center justify-between mb-2 group">
+                    <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">我的应用中心</h3>
+                    <button @click="$dispatch('open-modal', {name: 'create-workbench'})"
+                            class="text-gray-400 hover:text-brand-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <i class="ph-bold ph-plus"></i>
+                    </button>
+                </div>
+                
+                <div class="space-y-0.5">
+                    {% for wb in workbenches %}
+                    <a href="{{ url_for('index', active_wb_id=wb.id) }}" 
+                       class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 group
+                              {{ 'bg-brand-50 text-brand-700' if active_workbench and active_workbench.id == wb.id else 'text-gray-600 hover:bg-gray-50 hover:text-gray-900' }}">
+                        <i class="ph {{ 'ph-desktop' if active_workbench and active_workbench.id == wb.id else 'ph-desktop' }} text-lg opacity-80"></i>
+                        <span class="truncate">{{ wb.name }}</span>
+                        {% if active_workbench and active_workbench.id == wb.id %}
+                        <div class="ml-auto w-1.5 h-1.5 rounded-full bg-brand-500"></div>
+                        {% endif %}
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            {% if not workbenches %}
+                <div class="text-center px-4 py-6 border-2 border-dashed border-gray-100 rounded-xl bg-gray-50/50">
+                <p class="text-xs text-gray-400 mb-2">暂无应用中心</p>
+                <button @click="$dispatch('open-modal', {name: 'create-workbench'})" class="text-xs font-medium text-brand-600 hover:text-brand-700">创建第一个</button>
+            </div>
+            {% endif %}
+
+        </div>
+
+        <!-- User Profile -->
+        {% if user %}
+        <div class="p-4 border-t border-gray-100 bg-gray-50/50">
+            <div class="flex items-center gap-3">
+                <img src="{{ user.avatar or 'https://ui-avatars.com/api/?name=' + user.name }}" class="w-9 h-9 rounded-full border-2 border-white shadow-sm">
+                <div class="flex-1 min-w-0">
+                    <p class="text-sm font-medium text-gray-900 truncate">{{ user.name }}</p>
+                    <a href="{{ url_for('logout') }}" class="text-xs text-gray-500 hover:text-red-600 transition-colors">退出登录</a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col min-w-0 bg-[#F9FAFB] relative h-full" x-data="{}">
+        
+        <!-- Toggle Sidebar Button (Floating) -->
+        <button @click="sidebarOpen = !sidebarOpen" 
+                class="absolute left-4 top-4 z-10 text-gray-400 hover:text-gray-600 p-1 hover:bg-white/80 rounded transition-colors"
+                x-show="!sidebarOpen" x-transition>
+            <i class="ph-bold ph-list text-xl"></i>
+        </button>
+
+        {% if active_workbench %}
+        <div class="flex-1 overflow-y-auto p-8 lg:p-12">
+            
+            <!-- Workbench Header -->
+            <header class="max-w-7xl mx-auto mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <div>
+                    <div class="flex items-center gap-3 mb-2">
+                        <button @click="sidebarOpen = !sidebarOpen" class="text-gray-400 hover:text-gray-600 mr-1" title="Toggle Sidebar">
+                            <i class="ph-bold ph-sidebar-simple text-xl"></i>
+                        </button>
+                        <h1 class="text-3xl font-bold text-gray-900 tracking-tight">{{ active_workbench.name }}</h1>
+                    </div>
+                    <p class="text-gray-500 text-sm max-w-xl">{{ active_workbench.description or '汇聚您的核心应用，让工作流程更流畅' }}</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button @click="$dispatch('open-modal', {name: 'create-workspace', wb_id: {{ active_workbench.id }}})"
+                            class="group bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:border-brand-300 hover:text-brand-600 hover:shadow-sm transition-all flex items-center gap-2">
+                        <i class="ph-bold ph-plus-circle text-gray-400 group-hover:text-brand-500"></i> 新建分组
+                    </button>
+                </div>
+            </header>
+
+            <!-- Workspaces & Apps -->
+            <div class="max-w-7xl mx-auto space-y-10 pb-20">
+                {% for workspace in active_workbench.workspaces %}
+                    {% if workspace.is_public or user in workspace.allowed_users or active_workbench.owner_id == user.id %}
+                    <section>
+                        <div class="flex items-center justify-between mb-4 border-b border-gray-100 pb-2">
+                            <div class="flex items-center gap-2">
+                                <h2 class="text-lg font-semibold text-gray-800">{{ workspace.name }}</h2>
+                                {% if not workspace.is_public %}
+                                <i class="ph-fill ph-lock-key text-yellow-500 text-sm" title="私有分组"></i>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-3">
+                            <!-- App Cards -->
+                            {% for app in workspace.apps %}
+                            <div class="group relative bg-white rounded-lg border border-gray-100 shadow-sm hover:shadow-soft hover:-translate-y-0.5 transition-all duration-200 flex flex-col p-3 min-h-[100px]"
+                                 x-data="{ showTooltip: false }"
+                                 @mouseenter="showTooltip = true"
+                                 @mouseleave="showTooltip = false">
+
+                                <!-- Tooltip -->
+                                <div x-show="showTooltip"
+                                     x-transition:enter="transition ease-out duration-200"
+                                     x-transition:enter-start="opacity-0 scale-95 translate-y-1"
+                                     x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+                                     x-transition:leave="transition ease-in duration-150"
+                                     x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+                                     x-transition:leave-end="opacity-0 scale-95 translate-y-1"
+                                     class="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-3 z-50 w-64 pointer-events-none"
+                                     style="display: none;">
+                                    <div class="bg-gray-900/90 backdrop-blur-sm text-white text-xs rounded-xl p-3 shadow-xl border border-white/10">
+                                        <div class="font-semibold mb-1 text-sm text-white">{{ app.name }}</div>
+                                        <div class="text-gray-300 mb-2 truncate font-mono text-[10px] bg-black/30 rounded px-1.5 py-0.5 inline-block max-w-full">{{ app.url }}</div>
+                                        {% if app.description %}
+                                        <div class="text-gray-300 text-[11px] leading-relaxed mb-2 border-l-2 border-brand-500 pl-2">{{ app.description or '暂无描述' }}</div>
+                                        {% endif %}
+                                        <div class="flex items-center gap-3 pt-2 border-t border-white/10">
+                                            <div class="flex items-center gap-1.5 text-gray-400">
+                                                <i class="ph-bold ph-eye text-brand-400"></i>
+                                                <span class="text-[10px] font-medium">{{ app.visits }} 次使用</span>
+                                            </div>
+                                        </div>
+                                        <!-- Arrow -->
+                                        <div class="absolute top-full left-1/2 transform -translate-x-1/2 border-l-[6px] border-r-[6px] border-t-[6px] border-transparent border-t-gray-900/90"></div>
+                                    </div>
+                                </div>
+
+                                <!-- Action Buttons (Top Right) -->
+                                <div class="absolute top-1 right-1 flex gap-0.5 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button @click="$dispatch('open-modal', {
+                                                name: 'add-app',
+                                                ws_id: {{ workspace.id }},
+                                                isEdit: true,
+                                                appId: {{ app.id }},
+                                                appData: {
+                                                    name: '{{ app.name }}',
+                                                    url: '{{ app.url }}',
+                                                    description: '{{ app.description or '' }}',
+                                                    icon_url: '{{ app.icon_url or '' }}',
+                                                    icon_type: '{{ app.icon_type }}'
+                                                }
+                                            })"
+                                            class="text-gray-400 hover:text-blue-500 p-0.5 rounded hover:bg-blue-50 transition-colors">
+                                        <i class="ph-bold ph-pencil-simple text-[10px]"></i>
+                                    </button>
+                                    <a href="{{ url_for('delete_app', app_id=app.id) }}"
+                                       @click.prevent="if(confirm('确定要删除这个应用吗？')) window.location.href=$el.href"
+                                       class="text-gray-400 hover:text-red-500 p-0.5 rounded hover:bg-red-50 transition-colors">
+                                        <i class="ph-bold ph-trash text-[10px]"></i>
+                                    </a>
+                                </div>
+
+                                <a href="{{ url_for('visit_app', app_id=app.id) }}" target="_blank" class="flex flex-col items-center text-center gap-2 w-full relative">
+                                    <!-- Icon (Larger) -->
+                                    <div class="w-14 h-14 rounded-xl shrink-0 border border-gray-100 overflow-hidden bg-gray-50 flex items-center justify-center shadow-sm group-hover:shadow-md transition-shadow">
+                                        {% if app.icon_url %}
+                                            <img src="{{ app.icon_url }}" class="w-full h-full object-cover">
+                                        {% else %}
+                                            <div class="w-full h-full bg-gradient-to-br from-{{ app.color }}-100 to-{{ app.color }}-200 flex items-center justify-center text-{{ app.color }}-600">
+                                                <span class="text-xl font-bold uppercase">{{ app.name[:1] }}</span>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+
+                                    <div class="w-full min-w-0">
+                                        <h3 class="font-semibold text-gray-900 truncate text-xs group-hover:text-brand-600 transition-colors leading-tight">{{ app.name }}</h3>
+                                    </div>
+                                </a>
+                            </div>
+                            {% endfor %}
+
+                            <!-- Add Button -->
+                            <button @click="$dispatch('open-modal', {name: 'add-app', ws_id: {{ workspace.id }}})"
+                                    class="h-full min-h-[100px] rounded-lg border-2 border-dashed border-gray-200 bg-transparent flex flex-col items-center justify-center text-gray-400 hover:text-brand-600 hover:border-brand-300 hover:bg-brand-50/30 transition-all gap-1.5 group">
+                                <div class="w-8 h-8 rounded-full bg-gray-50 group-hover:bg-white flex items-center justify-center transition-colors">
+                                    <i class="ph-bold ph-plus text-sm"></i>
+                                </div>
+                                <span class="text-[10px] font-medium">添加</span>
+                            </button>
+                        </div>
+                    </section>
+                    {% endif %}
+                {% else %}
+                    <!-- Empty State for Workspaces -->
+                    <div class="flex flex-col items-center justify-center py-16 text-center">
+                        <div class="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center text-gray-400 mb-3">
+                            <i class="ph-duotone ph-circles-four text-xl"></i>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-900 mb-1">开始您的 WorkApp 之旅</h3>
+                        <p class="text-gray-500 text-sm max-w-md mb-6">创建您的第一个分组，开始组织团队的数字工具</p>
+                        <button @click="$dispatch('open-modal', {name: 'create-workspace', wb_id: {{ active_workbench.id }}})"
+                                class="btn bg-brand-600 text-white px-5 py-2.5 rounded-lg text-sm font-medium hover:bg-brand-700 shadow-lg shadow-brand-500/25 transition-all">
+                            新建分组
+                        </button>
+                    </div>
+                {% endfor %}
+            </div>
+
+        </div>
+        {% else %}
+            <!-- Welcome State (No Workbench Selected) -->
+            <div class="flex-1 flex flex-col items-center justify-center p-8 text-center bg-white">
+                <div class="relative mb-8">
+                    <div class="absolute inset-0 bg-brand-500 blur-3xl opacity-20 rounded-full"></div>
+                    <img src="https://illustrations.popsy.co/amber/surr-working.svg" class="relative z-10 w-80 h-auto">
+                </div>
+                <h1 class="text-3xl font-bold text-gray-900 mb-3 tracking-tight">欢迎使用 WorkApp</h1>
+                <p class="text-gray-500 mb-8 max-w-lg leading-relaxed">
+                    您的智能企业应用中心，一站式管理所有工作工具。让团队协作更高效，让应用管理更简单。
+                </p>
+                <button @click="$dispatch('open-modal', {name: 'create-workbench'})" 
+                        class="bg-brand-600 text-white px-8 py-3 rounded-xl font-medium hover:bg-brand-700 shadow-xl shadow-brand-500/30 hover:-translate-y-0.5 transition-all duration-300 flex items-center gap-2">
+                    <i class="ph-bold ph-plus"></i>
+                    创建我的应用中心
+                </button>
+            </div>
+        {% endif %}
+    </main>
+
+</div>
+
+<!-- Alpine.js Modal System -->
+<div x-data="{ 
+        open: false, 
+        modal: '', 
+        params: {},
+        // App Form Data
+        formData: {
+            url: '',
+            name: '',
+            description: '',
+            icon_url: '',
+            icon_type: 'url' // 'url' or 'upload'
+        },
+        isLoadingMeta: false,
+        isEdit: false,
+        editAppId: null,
+        
+        async fetchMeta() {
+            if (!this.formData.url || this.isLoadingMeta) return;
+            this.isLoadingMeta = true;
+            try {
+                const res = await fetch('/api/fetch-meta', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({url: this.formData.url})
+                });
+                const data = await res.json();
+                if (data.title) this.formData.name = data.title.substring(0, 10);
+                if (data.description) this.formData.description = data.description;
+                if (data.icon_url) {
+                    this.formData.icon_url = data.icon_url;
+                    this.formData.icon_type = 'url';
+                }
+            } catch(e) {
+                console.error(e);
+            } finally {
+                this.isLoadingMeta = false;
+            }
+        },
+        
+        initModal(detail) {
+            this.open = true; 
+            this.modal = detail.name; 
+            this.params = detail;
+            
+            if (detail.isEdit && detail.appData) {
+                this.isEdit = true;
+                this.editAppId = detail.appId;
+                this.formData = { ...detail.appData };
+            } else {
+                this.resetForm();
+            }
+        },
+        
+        resetForm() {
+            this.formData = { url: '', name: '', description: '', icon_url: '', icon_type: 'url' };
+            this.isLoadingMeta = false;
+            this.isEdit = false;
+            this.editAppId = null;
+        },
+
+     }"
+     @open-modal.window="initModal($event.detail)"
+     @keydown.escape.window="open = false"
+     x-show="open"
+     x-cloak
+     class="relative z-50">
+  
+  <!-- Backdrop -->
+  <div x-show="open" 
+       x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" 
+       x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" 
+       class="fixed inset-0 bg-gray-900/40 backdrop-blur-sm transition-opacity"></div>
+
+  <!-- Modal Panel -->
+  <div class="fixed inset-0 z-10 w-screen overflow-y-auto">
+    <div class="flex min-h-full items-center justify-center p-4">
+      
+      <div x-show="open" 
+           @click.away="open = false"
+           x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+           class="relative transform overflow-hidden rounded-2xl bg-white shadow-2xl transition-all sm:w-full sm:max-w-lg border border-gray-100">
+        
+        <!-- 1. Create Workbench -->
+        <template x-if="modal === 'create-workbench'">
+            <form action="{{ url_for('create_workbench') }}" method="POST" class="p-8">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 rounded-full bg-brand-50 flex items-center justify-center text-brand-600">
+                        <i class="ph-duotone ph-desktop text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-gray-900">创建应用中心</h3>
+                        <p class="text-sm text-gray-500">为您的团队打造专属的应用中心</p>
+                    </div>
+                </div>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">应用中心名称</label>
+                        <input name="name" type="text" placeholder="例如: 研发中心" class="w-full border-gray-200 rounded-lg px-4 py-2.5 focus:border-brand-500 focus:ring-brand-500/20 focus:ring-4 transition-all outline-none text-sm bg-gray-50 focus:bg-white" required>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-3 mt-8">
+                    <button type="button" @click="open = false" class="px-5 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors">取消</button>
+                    <button type="submit" class="px-5 py-2.5 text-sm font-medium bg-brand-600 text-white rounded-lg hover:bg-brand-700 shadow-lg shadow-brand-500/20 transition-all">创建</button>
+                </div>
+            </form>
+        </template>
+
+        <!-- 2. Create Workspace -->
+        <template x-if="modal === 'create-workspace'">
+            <form :action="'/workbench/' + params.wb_id + '/workspace/new'" method="POST" class="p-8">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
+                        <i class="ph-duotone ph-folder-notch-plus text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold text-gray-900">新建分组</h3>
+                        <p class="text-sm text-gray-500">按项目或功能对应用进行智能分组</p>
+                    </div>
+                </div>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">名称</label>
+                        <input name="name" type="text" placeholder="例如: 研发工具箱、客户服务" class="w-full border-gray-200 rounded-lg px-4 py-2.5 focus:border-brand-500 focus:ring-brand-500/20 focus:ring-4 transition-all outline-none text-sm bg-gray-50 focus:bg-white" required>
+                    </div>
+                    
+                    <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                        <input type="checkbox" name="is_public" id="is_public" checked class="rounded text-brand-600 focus:ring-brand-500 w-4 h-4">
+                        <label for="is_public" class="text-sm text-gray-700 select-none">对此应用中心所有成员可见</label>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-3 mt-8">
+                    <button type="button" @click="open = false" class="px-5 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors">取消</button>
+                    <button type="submit" class="px-5 py-2.5 text-sm font-medium bg-gray-900 text-white rounded-lg hover:bg-gray-800 shadow-lg transition-all">创建</button>
+                </div>
+            </form>
+        </template>
+
+        <!-- 3. Add/Edit App (Smart Form) -->
+        <template x-if="modal === 'add-app'">
+            <form :action="isEdit ? '/app/update/' + editAppId : '/workspace/' + params.ws_id + '/app/new'" method="POST" enctype="multipart/form-data" class="p-8">
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center text-green-600">
+                            <i class="ph-duotone ph-rocket-launch text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-900" x-text="isEdit ? '编辑应用' : '添加应用'"></h3>
+                            <p class="text-sm text-gray-500" x-text="isEdit ? '更新应用信息和设置' : '将您的常用工具添加到工作中心'"></p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="space-y-5">
+                    
+                    <!-- URL Input with Auto Fetch -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">链接地址 (URL)</label>
+                        <div class="relative">
+                            <input x-model="formData.url" @blur="fetchMeta" name="url" type="text" placeholder="https://app.example.com" class="w-full border-gray-200 rounded-lg pl-4 pr-10 py-2.5 focus:border-brand-500 focus:ring-brand-500/20 focus:ring-4 transition-all outline-none text-sm bg-gray-50 focus:bg-white" required>
+                            <div x-show="isLoadingMeta" class="absolute right-3 top-2.5">
+                                <i class="ph-bold ph-spinner animate-spin text-brand-600"></i>
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-400 mt-1">输入应用链接，WorkApp 将自动识别应用信息</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">应用名称</label>
+                            <input x-model="formData.name" name="name" type="text" placeholder="应用显示名称" class="w-full border-gray-200 rounded-lg px-4 py-2.5 focus:border-brand-500 focus:ring-brand-500/20 focus:ring-4 transition-all outline-none text-sm bg-gray-50 focus:bg-white" required>
+                        </div>
+                        
+                        <!-- Icon Selector -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">图标来源</label>
+                            <div class="flex bg-gray-100 p-1 rounded-lg">
+                                <button type="button" @click="formData.icon_type = 'url'" 
+                                        :class="formData.icon_type === 'url' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'"
+                                        class="flex-1 py-1.5 text-xs font-medium rounded-md transition-all">网络</button>
+                                <button type="button" @click="formData.icon_type = 'upload'"
+                                        :class="formData.icon_type === 'upload' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'"
+                                        class="flex-1 py-1.5 text-xs font-medium rounded-md transition-all">上传</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Icon Input Area -->
+                    <div class="p-4 border border-gray-100 rounded-xl bg-gray-50/50 flex items-center gap-4">
+                        <!-- Icon Preview -->
+                        <div class="w-12 h-12 bg-white border border-gray-200 rounded-lg flex items-center justify-center overflow-hidden shrink-0">
+                            <template x-if="formData.icon_url && formData.icon_type === 'url'">
+                                <img :src="formData.icon_url" class="w-full h-full object-cover">
+                            </template>
+                            <template x-if="!formData.icon_url || formData.icon_type === 'upload'">
+                                <i class="ph-duotone ph-image text-gray-300 text-2xl"></i>
+                            </template>
+                        </div>
+                        
+                        <div class="flex-1">
+                            <template x-if="formData.icon_type === 'url'">
+                                <input x-model="formData.icon_url" name="icon_url" type="text" placeholder="图标 URL 地址" class="w-full text-xs border-gray-200 rounded-md py-2">
+                            </template>
+                            <template x-if="formData.icon_type === 'upload'">
+                                <input name="icon_file" type="file" accept="image/*" class="w-full text-xs text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100">
+                            </template>
+                            <input type="hidden" name="icon_type" x-model="formData.icon_type">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">描述 (可选)</label>
+                        <textarea x-model="formData.description" name="description" rows="2" placeholder="简要描述这个应用的作用" class="w-full border-gray-200 rounded-lg px-4 py-2.5 focus:border-brand-500 focus:ring-brand-500/20 focus:ring-4 transition-all outline-none text-sm bg-gray-50 focus:bg-white resize-none"></textarea>
+                    </div>
+                </div>
+
+                <div class="flex justify-end gap-3 mt-8">
+                    <button type="button" @click="open = false" class="px-5 py-2.5 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors">取消</button>
+                    <button type="submit" class="px-5 py-2.5 text-sm font-medium bg-brand-600 text-white rounded-lg hover:bg-brand-700 shadow-lg shadow-brand-500/20 transition-all" x-text="isEdit ? '保存修改' : '添加应用'"></button>
+                </div>
+            </form>
+        </template>
+
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
